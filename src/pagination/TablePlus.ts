@@ -1,5 +1,5 @@
 import { Table } from "@tiptap/extension-table";
-import { mergeAttributes } from "@tiptap/core";
+import {mergeAttributes, NodeViewRendererProps} from "@tiptap/core";
 import { DOMOutputSpec } from "@tiptap/pm/model";
 import { TableRowGroup } from "./TableRowGroup";
 import { TableCommandExtension } from "../TableCommandExtension";
@@ -62,10 +62,10 @@ export const TablePlus = Table.extend<TablePlusOptions>({
     ];
     return table;
   },
-  addNodeView() {
-      return ({ node, getPos, editor }: { node: any; getPos: () => number; editor: any }) =>
-      new TablePlusNodeView(node, getPos, editor, this.options);
-  },
+    addNodeView() {
+        return (props: NodeViewRendererProps) =>
+            new TablePlusNodeView(props.node, props.getPos, props.editor, this.options);
+    },
   addProseMirrorPlugins() {
     return [
       new Plugin({
