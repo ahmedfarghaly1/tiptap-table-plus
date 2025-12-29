@@ -1,4 +1,4 @@
-import Table from "@tiptap/extension-table";
+import { Table } from "@tiptap/extension-table";
 import { mergeAttributes } from "@tiptap/core";
 import { DOMOutputSpec } from "@tiptap/pm/model";
 import { TableRowGroup } from "./TableRowGroup";
@@ -33,7 +33,7 @@ export const TablePlus = Table.extend<TablePlusOptions>({
       ...this.parent?.(),
       columnSize: {
         default: "",
-        parseHTML: (element) => {
+          parseHTML: (element: HTMLElement) => {
           let columnSize = element.getAttribute("data-column-size") || "";
           let columnSizeList = columnSize.split(",");
           const isAllNumber = columnSizeList.every(
@@ -44,7 +44,7 @@ export const TablePlus = Table.extend<TablePlusOptions>({
           }
           return columnSizeList.join(",");
         },
-        renderHTML: (attributes) => {
+          renderHTML: (attributes: { columnSize: string }) => {
           return {
             "data-column-size": attributes.columnSize,
           };
@@ -52,7 +52,7 @@ export const TablePlus = Table.extend<TablePlusOptions>({
       },
     };
   },
-  renderHTML({ node, HTMLAttributes }) {
+    renderHTML({ node, HTMLAttributes }: { node: any; HTMLAttributes: Record<string, any> }) {
     const table: DOMOutputSpec = [
       "table",
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
@@ -63,7 +63,7 @@ export const TablePlus = Table.extend<TablePlusOptions>({
     return table;
   },
   addNodeView() {
-    return ({ node, getPos, editor }) =>
+      return ({ node, getPos, editor }: { node: any; getPos: () => number; editor: any }) =>
       new TablePlusNodeView(node, getPos, editor, this.options);
   },
   addProseMirrorPlugins() {
