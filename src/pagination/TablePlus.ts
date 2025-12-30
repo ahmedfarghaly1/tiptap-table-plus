@@ -11,7 +11,7 @@ import { findParentNodeOfType, findParentNodeOfTypeAtPos, calculateNewColumnWidt
 import { Node } from "@tiptap/pm/model";
 
 export const TablePlus = Table.extend<TablePlusOptions>({
-  content: "(tableRowGroup|tableRow)+",
+  content: "(tableRow)+",
     addOptions() {
         const parent = (this.parent?.() as TablePlusOptions) ?? ({} as TablePlusOptions);
         return {
@@ -140,19 +140,19 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                   // Check for is going to remove
                   let _from = step.from - (position - currentPosition);
                   let _to = step.to - (position - currentPosition);
-                  
+
                   let _table = findParentNodeOfType(
                     oldState,
                     _from,
                     this.type
                   );
-                  
+
                   let newStateTable = findParentNodeOfTypeAtPos(
                     step.from,
                     newState.doc,
                     this.type
                   );
-                  
+
                   if (!_table || !newStateTable) return false;
 
                   let tableRow: {
@@ -228,7 +228,7 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                         );
                       }
                       let columnAfterRemove = columnSize.slice(0, removeFromToIndex.from).concat(columnSize.slice(removeFromToIndex.from + removeFromToIndex.count));
-                      
+
                       let newColumnWidth = addNodes.length > 0 ? Array(addNodes.length).fill(calculateNewColumnWidth(columnAfterRemove, addNodes.length)) : [];
 
                       let newColumnSize = addColumns(columnAfterRemove, newColumnWidth as number[]);
