@@ -277,7 +277,6 @@ export class TablePlusNodeView {
 
         const lang =
             editorElement.lang ||
-            document.lang ||
             document.documentElement.lang ||
             "";
         const rtlLanguages = ["ar", "he", "fa", "ur", "ps", "sd"];
