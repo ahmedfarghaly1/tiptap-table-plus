@@ -12,13 +12,13 @@ export class TablePlusNodeView {
     cellPercentage: number[];
     columnSize: string;
 
-    slider: HTMLElement;
+    slider: HTMLElement; // overlay for resize handles
     handles: HTMLElement[];
     options: any;
 
     isRTL: boolean;
 
-    //  observe dir/lang changes (system/app toggle)
+    // observe direction changes
     private dirObserver?: MutationObserver;
 
     constructor(
@@ -31,36 +31,41 @@ export class TablePlusNodeView {
         this.columnSize = node.attrs.columnSize;
         this.getPos = getPos;
         this.editor = editor;
-        this.options = options;
+        this.options = options ?? {};
 
         this.isRTL = this.getIsRTL();
 
+        // Root wrapper for the table + overlay
         this.dom = document.createElement("div");
-        this.dom.style.position = "relative";
+        this.dom.style.position = "relative"; // containing block for absolute overlay
 
         this.maxCellCount = 0;
         this.cellPercentage = [];
         this.handles = [];
 
-        this.slider = document.createElement("div");
-        this.slider.contentEditable = "false";
-        this.slider.style.width = "100%";
-        this.slider.style.position = "relative";
-        this.dom.appendChild(this.slider);
-
-        // Build initial sizes + handles
-        this.updateNode(node);
-
+        // The table content element
         this.contentDOM = document.createElement("table");
         this.contentDOM.classList.add("table-plus");
         this.contentDOM.style.flex = "1";
         this.dom.appendChild(this.contentDOM);
 
-        // start observing direction changes
+        // Absolute overlay that spans the table area
+        this.slider = document.createElement("div");
+        this.slider.contentEditable = "false";
+        this.slider.style.position = "absolute";
+        this.slider.style.inset = "0";             // top/right/bottom/left: 0
+        this.slider.style.zIndex = "2";             // below handle z-index but above table content
+        this.slider.style.pointerEvents = "none";   // ignore events; handles will re-enable
+        this.dom.appendChild(this.slider);
+
+        // Initialize sizes + handles
+        this.updateNode(node);
+
+        // Start observing direction changes (e.g., switching to Arabic)
         this.startDirectionObserver();
     }
 
-    // observe direction changes even when doc doesn't change
+    // Observe direction changes on editor root and document
     private startDirectionObserver() {
         const editorEl = this.editor.view.dom as HTMLElement;
 
@@ -70,20 +75,18 @@ export class TablePlusNodeView {
                 this.isRTL = nextRTL;
                 // Rebuild handles so left/right/transform are correct
                 this.updateHandles();
-                // Ensure handles match current percentages after rebuild
+                // Ensure handle positions reflect current percentages
                 this.updateHandlePositions();
             }
         };
 
-        // Run once after mount (covers cases where dir applies after constructor)
+        // Run once after mount
         requestAnimationFrame(check);
 
         this.dirObserver = new MutationObserver(() => {
-            // wait a frame so computedStyle reflects the new direction
             requestAnimationFrame(check);
         });
 
-        // Watch likely sources that change when "system/app" direction toggles
         this.dirObserver.observe(editorEl, {
             attributes: true,
             attributeFilter: ["dir", "lang", "style", "class"],
@@ -101,15 +104,17 @@ export class TablePlusNodeView {
         this.dirObserver = undefined;
     }
 
+    // Create full-height line handles and wire drag logic
     addHandles() {
         const dragHandle = (handle: HTMLElement) => {
             let handleIndex = parseInt(handle.dataset.index ?? "0");
 
-            const onMouseMove = (e: MouseEvent) => {
+            const onMove = (clientX: number) => {
                 const rect = this.slider.getBoundingClientRect();
 
-                let x = this.isRTL ? rect.right - e.clientX : e.clientX - rect.left;
-                x = x < this.options.minColumnSize ? this.options.minColumnSize : x;
+                // position of pointer relative to overlay rect, respecting RTL
+                let x = this.isRTL ? rect.right - clientX : clientX - rect.left;
+                x = Math.max(x, this.options.minColumnSize ?? 0);
 
                 let percent = Math.min(Math.max((x / rect.width) * 100, 0), 100);
 
@@ -119,33 +124,15 @@ export class TablePlusNodeView {
                         : parseFloat(h.style.left || "0");
                 };
 
-                // enforce min column size with previous handle
+                // Enforce min size with previous handle
                 if (handleIndex > 0) {
                     const prev = getHandlePosition(this.handles[handleIndex - 1]);
-                    const prevPixel =
-                        (prev * x) / (percent || 0.000001) + this.options.minColumnSize;
-
-                    if (x < prevPixel) {
-                        percent = Math.min(
-                            Math.max((prevPixel / rect.width) * 100, 0),
-                            100
-                        );
-                    }
                     percent = Math.max(percent, prev);
                 }
 
-                // enforce min column size with next handle
+                // Enforce min size with next handle
                 if (handleIndex < this.handles.length - 1) {
                     const next = getHandlePosition(this.handles[handleIndex + 1]);
-                    const nextPixel =
-                        (next * x) / (percent || 0.000001) - this.options.minColumnSize;
-
-                    if (x > nextPixel) {
-                        percent = Math.min(
-                            Math.max((nextPixel / rect.width) * 100, 0),
-                            100
-                        );
-                    }
                     percent = Math.min(percent, next);
                 }
 
@@ -160,12 +147,38 @@ export class TablePlusNodeView {
                 this.updateValues(this.getColumnSizes(this.handles), false);
             };
 
-            const onMouseUp = () => {
+            // Pointer events (covers mouse + touch + pen)
+            const onPointerMove = (e: PointerEvent) => {
+                e.preventDefault();
+                onMove(e.clientX);
+            };
+            const onPointerUp = (e: PointerEvent) => {
+                e.preventDefault();
+                document.removeEventListener("pointermove", onPointerMove);
+                document.removeEventListener("pointerup", onPointerUp);
+                this.updateValues(this.getColumnSizes(this.handles), true);
+            };
+
+            handle.addEventListener("pointerdown", (e: PointerEvent) => {
+                // Touch devices don’t show cursor; still allow dragging
+                (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+                e.preventDefault();
+                handleIndex = parseInt(handle.dataset.index ?? "0");
+                document.addEventListener("pointermove", onPointerMove);
+                document.addEventListener("pointerup", onPointerUp);
+            });
+
+            // Mouse fallback (older browsers)
+            const onMouseMove = (e: MouseEvent) => {
+                e.preventDefault();
+                onMove(e.clientX);
+            };
+            const onMouseUp = (e: MouseEvent) => {
+                e.preventDefault();
                 document.removeEventListener("mousemove", onMouseMove);
                 document.removeEventListener("mouseup", onMouseUp);
                 this.updateValues(this.getColumnSizes(this.handles), true);
             };
-
             handle.addEventListener("mousedown", (e) => {
                 e.preventDefault();
                 handleIndex = parseInt(handle.dataset.index ?? "0");
@@ -182,28 +195,30 @@ export class TablePlusNodeView {
             if (index >= this.handles.length) {
                 const handle = document.createElement("div");
                 handle.className = "handle";
-                handle.style.position = "absolute";
-                handle.style.top = "50%";
-                handle.style.width = "12px";
-                handle.style.height = "12px";
-                handle.style.zIndex = "9999";
-                handle.style.borderRadius = "50%";
-                handle.style.cursor = "ew-resize";
-
-                Object.assign(handle.style, {
-                    ...this.options.resizeHandleStyle,
-                });
-
                 handle.dataset.index = index.toString();
+
+                // Placement within overlay
+                handle.style.position = "absolute";
+                handle.style.top = "0";
+                handle.style.height = "100%";
+                handle.style.width = (this.options.resizeHandleStyle?.width as string) || "12px"; // hit-area width
+                handle.style.zIndex = "2";
+                handle.style.pointerEvents = "auto";
+                handle.style.cursor = "ew-resize";
+                handle.style.touchAction = "none";
+                // Allow user overrides via options
+                if (this.options.resizeHandleStyle) {
+                    Object.assign(handle.style, this.options.resizeHandleStyle);
+                }
 
                 if (this.isRTL) {
                     handle.style.right = `${lastValue}%`;
                     handle.style.left = "auto";
-                    handle.style.transform = "translate(50%, -50%)";
+                    handle.style.transform = "translateX(50%)";  // center over seam (RTL)
                 } else {
                     handle.style.left = `${lastValue}%`;
                     handle.style.right = "auto";
-                    handle.style.transform = "translate(-50%, -50%)";
+                    handle.style.transform = "translateX(-50%)"; // center over seam (LTR)
                 }
 
                 this.slider.appendChild(handle);
@@ -214,20 +229,13 @@ export class TablePlusNodeView {
     }
 
     removeHandles() {
-        // remove until counts match
         while (this.handles.length > this.cellPercentage.length) {
             const handle = this.handles[this.handles.length - 1];
             if (!handle) break;
-
-            if (handle.parentNode === this.slider) {
-                this.slider.removeChild(handle);
-            }
+            if (handle.parentNode === this.slider) this.slider.removeChild(handle);
             this.handles.splice(this.handles.length - 1, 1);
         }
-
-        this.handles.forEach((h, i) => {
-            h.dataset.index = i.toString();
-        });
+        this.handles.forEach((h, i) => (h.dataset.index = i.toString()));
     }
 
     updateHandlePositions() {
@@ -240,25 +248,23 @@ export class TablePlusNodeView {
             if (this.isRTL) {
                 h.style.right = `${lastValue}%`;
                 h.style.left = "auto";
-                h.style.transform = "translate(50%, -50%)";
+                h.style.transform = "translateX(50%)";  // X only
             } else {
                 h.style.left = `${lastValue}%`;
                 h.style.right = "auto";
-                h.style.transform = "translate(-50%, -50%)";
+                h.style.transform = "translateX(-50%)"; // X only
             }
         }
     }
 
     updateHandles() {
-        // clear all existing handles
+        // clear current handles
         this.handles.forEach((handle) => {
-            if (handle.parentNode === this.slider) {
-                this.slider.removeChild(handle);
-            }
+            if (handle.parentNode === this.slider) this.slider.removeChild(handle);
         });
         this.handles = [];
 
-        // recreate handles
+        // recreate with current direction and percentages
         this.addHandles();
     }
 
@@ -275,10 +281,7 @@ export class TablePlusNodeView {
             return true;
         }
 
-        const lang =
-            editorElement.lang ||
-            document.documentElement.lang ||
-            "";
+        const lang = editorElement.lang || document.documentElement.lang || "";
         const rtlLanguages = ["ar", "he", "fa", "ur", "ps", "sd"];
         return rtlLanguages.some((rtlLang) => lang.startsWith(rtlLang));
     }
