@@ -13,6 +13,9 @@ export const TableRowGroup = Node.create({
       {
         tag: "tbody",
       },
+      {
+        tag: "thead",
+      },
     ];
   },
   addNodeView() {
@@ -24,8 +27,22 @@ export const TableRowGroup = Node.create({
       return { dom, contentDOM: tbody };
     };
   },
-  renderHTML() {
-    const table: DOMOutputSpec = ["tbody", {}, 0];
+  renderHTML({ node }: { node: ProseMirrorNode }) {
+    let isHeaderGroup = false;
+    if (node.childCount > 0) {
+      isHeaderGroup = true;
+      node.forEach((row) => {
+        if (row.type.name === "tableRow") {
+          row.forEach((cell) => {
+            if (cell.type.name !== "tableHeader") {
+              isHeaderGroup = false;
+            }
+          });
+        }
+      });
+    }
+    const tag = isHeaderGroup ? "thead" : "tbody";
+    const table: DOMOutputSpec = [tag, {}, 0];
     return table;
   },
 

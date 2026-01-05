@@ -54,10 +54,17 @@ export const TablePlus = Table.extend<TablePlusOptions>({
     };
   },
     renderHTML({ node, HTMLAttributes }: { node: any; HTMLAttributes: Record<string, any> }) {
+    const existingStyle = HTMLAttributes.style || "";
+    const borderRadius = "border-radius: 8px; overflow: hidden;";
+    const mergedStyle = existingStyle 
+      ? `${borderRadius} ${existingStyle}` 
+      : borderRadius;
+    
     const table: DOMOutputSpec = [
       "table",
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         border: 1,
+        style: mergedStyle,
       }),
       0,
     ];
