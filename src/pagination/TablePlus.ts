@@ -51,6 +51,15 @@ export const TablePlus = Table.extend<TablePlusOptions>({
           };
         },
       },
+      borderColor: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute("data-border-color"),
+        renderHTML: (attributes: { borderColor: string | null }) => {
+          return attributes.borderColor
+            ? { "data-border-color": attributes.borderColor, style: `--table-border-color:${attributes.borderColor}` }
+            : {};
+        },
+      },
       locked: {
         default: false,
         parseHTML: (element: HTMLElement) => {
@@ -264,28 +273,6 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                           }
                         }
                       });
-                      newState.doc.descendants((tableNode, tablePos) => {
-                        if (tableNode.type.name !== "table") return;
-
-                        let headerBg: string | null = null;
-                        tableNode.descendants((n) => {
-                          if (n.type.name === "tableHeader" && n.attrs?.backgroundColor) {
-                            headerBg = n.attrs.backgroundColor;
-                            return false;
-                          }
-                        });
-                        if (!headerBg) return;
-
-                        tableNode.descendants((n, relPos) => {
-                          if (n.type.name !== "tableHeader") return;
-                          if (n.attrs?.backgroundColor) return;
-                          tr = tr.setNodeMarkup(tablePos + 1 + relPos, undefined, {
-                            ...n.attrs,
-                            backgroundColor: headerBg,
-                          });
-                          isThereUpdate = true;
-                        });
-                      });
                     }else{
                       // Calculate totally new column size
                     }
@@ -295,6 +282,29 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                 });
               }
             }
+          });
+
+          newState.doc.descendants((tableNode, tablePos) => {
+            if (tableNode.type.name !== "table") return;
+
+            let headerBg: string | null = null;
+            tableNode.descendants((n) => {
+              if (n.type.name === "tableHeader" && n.attrs?.backgroundColor) {
+                headerBg = n.attrs.backgroundColor;
+                return false;
+              }
+            });
+            if (!headerBg) return;
+
+            tableNode.descendants((n, relPos) => {
+              if (n.type.name !== "tableHeader") return;
+              if (n.attrs?.backgroundColor) return;
+              tr = tr.setNodeMarkup(tablePos + 1 + relPos, undefined, {
+                ...n.attrs,
+                backgroundColor: headerBg,
+              });
+              isThereUpdate = true;
+            });
           });
 
           return isThereUpdate ? tr : null;

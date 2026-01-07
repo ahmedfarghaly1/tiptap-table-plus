@@ -19,12 +19,27 @@ export const TableHeaderPlus = TableHeader.extend({
                     };
                 },
             },
+            borderColor: {
+                default: null,
+                parseHTML: (element: HTMLElement) =>
+                    element.getAttribute("data-header-border") ||
+                    null,
+                renderHTML: (attrs: { borderColor?: string | null }) => {
+                    if (!attrs.borderColor) return {};
+                    return {
+                        "data-header-border": attrs.borderColor,
+                        style: `border-color:${attrs.borderColor}`,
+                    };
+                },
+            },
         };
     },
     addNodeView() {
         return ({ node }) => {
           const tableNode = this.editor.extensionManager.extensions.find((extension) => extension.name === "table");
-          const borderColor = tableNode ? tableNode.options.borderColor : "black";
+          const borderColor =
+            (node.attrs.borderColor as string) ||
+            "var(--table-border-color, black)";
           const dom = document.createElement('th');
           dom.style.border = `1px solid ${borderColor}`;
           const applyBackground = (n: typeof node) => {

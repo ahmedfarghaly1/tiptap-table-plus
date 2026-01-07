@@ -292,14 +292,23 @@ export class TablePlusNodeView {
         }
 
         const lang = editorElement.lang || document.documentElement.lang || "";
-        const rtlLanguages = ["ar", "he", "fa", "ur", "ps", "sd"];
+        const rtlLanguages = ["ar"];
         return rtlLanguages.some((rtlLang) => lang.startsWith(rtlLang));
     }
+
+    private applyTableStyles(node: Node) {
+        const tableExt = this.editor.extensionManager.extensions.find((ext) => ext.name === "table") as any;
+        const fallbackBorder = tableExt?.options?.borderColor || "black";
+        const effectiveBorder = (node.attrs.borderColor as string | null) || fallbackBorder;
+        this.dom.style.setProperty("--table-border-color", effectiveBorder);
+        this.contentDOM.style.setProperty("--table-border-color", effectiveBorder);
+    }
+
 
     updateNode(node: Node) {
         this.isRTL = this.getIsRTL();
         this.isLocked = Boolean(node.attrs.locked);
-
+        this.applyTableStyles(node);
         this.columnSize = node.attrs.columnSize;
 
         let _maxCellCount = 0;

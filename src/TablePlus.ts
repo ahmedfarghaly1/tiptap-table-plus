@@ -15,6 +15,15 @@ export const TablePlus = TiptapTable.extend({
                     return attributes.locked ? { "data-locked": "true" } : {};
                 },
             },
+            borderColor: {
+                default: null,
+                parseHTML: (element: HTMLElement) => element.getAttribute("data-border-color"),
+                renderHTML: (attributes: { borderColor: string | null }) => {
+                    return attributes.borderColor
+                        ? { "data-border-color": attributes.borderColor, style: `--table-border-color:${attributes.borderColor}` }
+                        : {};
+                },
+            },
         };
     },
     addExtensions() {
