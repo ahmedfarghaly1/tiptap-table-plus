@@ -6,8 +6,6 @@ const setTableBorderColor =
   ({ state, dispatch }: { state: EditorState; dispatch?: (tr: Transaction) => void }) => {
     const table = findParentNode((n) => n.type.name === "table")(state.selection);
     if (!table) return false;
-    if (table.node.attrs?.locked) return false;
-
     const tr = state.tr.setNodeMarkup(table.pos, undefined, {
       ...table.node.attrs,
       borderColor: color,
