@@ -6,6 +6,9 @@ declare module "@tiptap/core" {
       tableCommandExtension: {
         duplicateColumn: (withContent?: boolean) => ReturnType;
         duplicateRow: (withContent?: boolean) => ReturnType;
+        setTableAlign: (align: 'left' | 'center' | 'right' | 'start' | 'end' | 'justify') => ReturnType;
+        unsetTableAlign: () => ReturnType;
+        toggleTableLock: () => ReturnType;
       };
     }
   }

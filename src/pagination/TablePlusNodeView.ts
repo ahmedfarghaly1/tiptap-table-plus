@@ -14,9 +14,11 @@ export class TablePlusNodeView {
 
     slider: HTMLElement; // overlay for resize handles
     handles: HTMLElement[];
+    lockBadge: HTMLElement;
     options: any;
 
     isRTL: boolean;
+    isLocked: boolean;
 
     // observe direction changes
     private dirObserver?: MutationObserver;
@@ -34,6 +36,7 @@ export class TablePlusNodeView {
         this.options = options ?? {};
 
         this.isRTL = this.getIsRTL();
+        this.isLocked = Boolean(node.attrs?.locked);
 
         // Root wrapper for the table + overlay
         this.dom = document.createElement("div");
@@ -57,6 +60,10 @@ export class TablePlusNodeView {
         this.slider.style.zIndex = "2";             // below handle z-index but above table content
         this.slider.style.pointerEvents = "none";   // ignore events; handles will re-enable
         this.dom.appendChild(this.slider);
+
+        // Lock badge overlay
+        this.lockBadge = this.createLockBadge();
+        this.dom.appendChild(this.lockBadge);
 
         // Initialize sizes + handles
         this.updateNode(node);
@@ -106,6 +113,7 @@ export class TablePlusNodeView {
 
     // Create full-height line handles and wire drag logic
     addHandles() {
+        const locked = this.isLocked;
         const dragHandle = (handle: HTMLElement) => {
             let handleIndex = parseInt(handle.dataset.index ?? "0");
 
@@ -203,8 +211,8 @@ export class TablePlusNodeView {
                 handle.style.height = "100%";
                 handle.style.width = (this.options.resizeHandleStyle?.width as string) || "12px"; // hit-area width
                 handle.style.zIndex = "2";
-                handle.style.pointerEvents = "auto";
-                handle.style.cursor = "ew-resize";
+                handle.style.pointerEvents = locked ? "none" : "auto";
+                handle.style.cursor = locked ? "not-allowed" : "ew-resize";
                 handle.style.touchAction = "none";
                 // Allow user overrides via options
                 if (this.options.resizeHandleStyle) {
@@ -223,7 +231,9 @@ export class TablePlusNodeView {
 
                 this.slider.appendChild(handle);
                 this.handles.push(handle);
-                dragHandle(handle);
+                if (!locked) {
+                    dragHandle(handle);
+                }
             }
         }
     }
@@ -288,6 +298,7 @@ export class TablePlusNodeView {
 
     updateNode(node: Node) {
         this.isRTL = this.getIsRTL();
+        this.isLocked = Boolean(node.attrs.locked);
 
         this.columnSize = node.attrs.columnSize;
 
@@ -337,6 +348,7 @@ export class TablePlusNodeView {
 
         // ensure handles count matches and direction is respected
         this.updateHandles();
+        this.updateLockBadge();
     }
 
     getColumnSizes(handles: HTMLElement[]) {
@@ -361,6 +373,10 @@ export class TablePlusNodeView {
             "--cell-percentage",
             _values.map((a) => `${a}%`).join(" ")
         );
+
+        if (this.isLocked && updateNode) {
+            return;
+        }
 
         if (updateNode) {
             this.editor.commands.command(({ tr }) => {
@@ -391,5 +407,31 @@ export class TablePlusNodeView {
 
     ignoreMutation() {
         return true;
+    }
+
+    private createLockBadge() {
+        const badge = document.createElement("div");
+        badge.className =
+            "pointer-events-none absolute top-0 left-0 z-10 flex size-[33px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gray-200 p-0 select-none hidden";
+        badge.setAttribute("aria-hidden", "true");
+        badge.setAttribute("contenteditable", "false");
+
+        badge.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-gray-800">
+            <path d="M4 6.66537V5.33203C4 3.12536 4.66667 1.33203 8 1.33203C11.3333 1.33203 12 3.12536 12 5.33203V6.66537" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8.00065 12.3333C8.92113 12.3333 9.66732 11.5871 9.66732 10.6667C9.66732 9.74619 8.92113 9 8.00065 9C7.08018 9 6.33398 9.74619 6.33398 10.6667C6.33398 11.5871 7.08018 12.3333 8.00065 12.3333Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11.332 14.666H4.66536C1.9987 14.666 1.33203 13.9993 1.33203 11.3327V9.99935C1.33203 7.33268 1.9987 6.66602 4.66536 6.66602H11.332C13.9987 6.66602 14.6654 7.33268 14.6654 9.99935V11.3327C14.6654 13.9993 13.9987 14.666 11.332 14.666Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
+        return badge;
+    }
+
+    private updateLockBadge() {
+        if (!this.lockBadge) return;
+        if (this.isLocked) {
+            this.lockBadge.classList.remove("hidden");
+        } else {
+            this.lockBadge.classList.add("hidden");
+        }
     }
 }

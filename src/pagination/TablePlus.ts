@@ -51,6 +51,16 @@ export const TablePlus = Table.extend<TablePlusOptions>({
           };
         },
       },
+      locked: {
+        default: false,
+        parseHTML: (element: HTMLElement) => {
+          const attr = element.getAttribute("data-locked");
+          return attr === "true" || attr === "1" || attr === "";
+        },
+        renderHTML: (attributes: { locked: boolean }) => {
+          return attributes.locked ? { "data-locked": "true" } : {};
+        },
+      },
     };
   },
     renderHTML({ node, HTMLAttributes }: { node: any; HTMLAttributes: Record<string, any> }) {

@@ -1,10 +1,12 @@
 import { Extension } from '@tiptap/core';
-import { EditorState } from '@tiptap/pm/state';
-import { Transaction } from '@tiptap/pm/state';
+import { EditorState, Transaction } from '@tiptap/pm/state';
 import duplicateColumn from "./commands/duplicateColumn";
 import duplicateRow from "./commands/duplicateRow";
 import setTableAlign from "./commands/setTableAlign";
 import unsetTableAlign from "./commands/unsetTableAlign";
+import toggleTableLock from "./commands/toggleTableLock";
+
+type CommandContext = { state: EditorState; dispatch?: (tr: Transaction) => void };
 
 export const TableCommandExtension = Extension.create({
     name: "tableCommandExtension",
@@ -13,25 +15,30 @@ export const TableCommandExtension = Extension.create({
         return {
             duplicateColumn:
                 (withContent = true) =>
-                    ({ state, dispatch }: { state: EditorState; dispatch?: (tr: Transaction) => void }) => {
+                    ({ state, dispatch }: CommandContext) => {
                         duplicateColumn(state, dispatch, withContent);
                         return true;
                     },
             duplicateRow:
                 (withContent = true) =>
-                    ({ state, dispatch }: { state: EditorState; dispatch?: (tr: Transaction) => void }) => {
+                    ({ state, dispatch }: CommandContext) => {
                         duplicateRow(state, dispatch, withContent);
                         return true;
                     },
             setTableAlign:
                 (align: 'left' | 'center' | 'right' | 'start' | 'end' | 'justify') =>
-                    ({ state, dispatch }: { state: EditorState; dispatch?: (tr: Transaction) => void }) => {
+                    ({ state, dispatch }: CommandContext) => {
                         return setTableAlign(state, dispatch, align);
                     },
             unsetTableAlign:
                 () =>
-                    ({ state, dispatch }: { state: EditorState; dispatch?: (tr: Transaction) => void }) => {
+                    ({ state, dispatch }: CommandContext) => {
                         return unsetTableAlign(state, dispatch);
+                    },
+            toggleTableLock:
+                () =>
+                    ({ state, dispatch }: CommandContext) => {
+                        return toggleTableLock(state, dispatch);
                     },
         };
     },

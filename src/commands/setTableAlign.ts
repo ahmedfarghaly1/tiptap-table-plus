@@ -9,6 +9,8 @@ const setTableAlign = (
     const table = findParentNode(n => n.type.name === 'table')(state.selection);
     if (!table) return false;
 
+  if (table.node.attrs?.locked) return false;
+
     const tr = state.tr;
     let changed = false;
 
