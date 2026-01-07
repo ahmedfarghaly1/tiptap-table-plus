@@ -66,10 +66,10 @@ export const TablePlus = Table.extend<TablePlusOptions>({
     renderHTML({ node, HTMLAttributes }: { node: any; HTMLAttributes: Record<string, any> }) {
     const existingStyle = HTMLAttributes.style || "";
     const borderRadius = "border-radius: 8px; overflow: hidden;";
-    const mergedStyle = existingStyle 
-      ? `${borderRadius} ${existingStyle}` 
+    const mergedStyle = existingStyle
+      ? `${borderRadius} ${existingStyle}`
       : borderRadius;
-    
+
     const table: DOMOutputSpec = [
       "table",
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
@@ -263,6 +263,28 @@ export const TablePlus = Table.extend<TablePlusOptions>({
                             }
                           }
                         }
+                      });
+                      newState.doc.descendants((tableNode, tablePos) => {
+                        if (tableNode.type.name !== "table") return;
+
+                        let headerBg: string | null = null;
+                        tableNode.descendants((n) => {
+                          if (n.type.name === "tableHeader" && n.attrs?.backgroundColor) {
+                            headerBg = n.attrs.backgroundColor;
+                            return false;
+                          }
+                        });
+                        if (!headerBg) return;
+
+                        tableNode.descendants((n, relPos) => {
+                          if (n.type.name !== "tableHeader") return;
+                          if (n.attrs?.backgroundColor) return;
+                          tr = tr.setNodeMarkup(tablePos + 1 + relPos, undefined, {
+                            ...n.attrs,
+                            backgroundColor: headerBg,
+                          });
+                          isThereUpdate = true;
+                        });
                       });
                     }else{
                       // Calculate totally new column size

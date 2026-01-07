@@ -5,6 +5,7 @@ import duplicateRow from "./commands/duplicateRow";
 import setTableAlign from "./commands/setTableAlign";
 import unsetTableAlign from "./commands/unsetTableAlign";
 import toggleTableLock from "./commands/toggleTableLock";
+import setHeaderBackground from "./commands/setHeaderBackground";
 
 type CommandContext = { state: EditorState; dispatch?: (tr: Transaction) => void };
 
@@ -39,6 +40,11 @@ export const TableCommandExtension = Extension.create({
                 () =>
                     ({ state, dispatch }: CommandContext) => {
                         return toggleTableLock(state, dispatch);
+                    },
+            setHeaderBackground:
+                (color: string | null) =>
+                    ({ state, dispatch }: CommandContext) => {
+                        return setHeaderBackground(color)( { state, dispatch } );
                     },
         };
     },

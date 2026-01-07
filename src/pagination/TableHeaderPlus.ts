@@ -2,13 +2,41 @@ import TableHeader from "@tiptap/extension-table-header";
 import { mergeAttributes } from "@tiptap/core";
 
 export const TableHeaderPlus = TableHeader.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            backgroundColor: {
+                default: null,
+                parseHTML: (element: HTMLElement) =>
+                    element.getAttribute("data-header-bg") ||
+                    element.style.backgroundColor ||
+                    null,
+                renderHTML: (attrs: { backgroundColor?: string | null }) => {
+                    if (!attrs.backgroundColor) return {};
+                    return {
+                        "data-header-bg": attrs.backgroundColor,
+                        style: `background-color:${attrs.backgroundColor}`,
+                    };
+                },
+            },
+        };
+    },
     addNodeView() {
         return ({ node }) => {
           const tableNode = this.editor.extensionManager.extensions.find((extension) => extension.name === "table");
           const borderColor = tableNode ? tableNode.options.borderColor : "black";
           const dom = document.createElement('th');
           dom.style.border = `1px solid ${borderColor}`;
-          dom.style.backgroundColor = "var(--color-secondary, #f5f5f5)";
+          const applyBackground = (n: typeof node) => {
+            const bg = n.attrs.backgroundColor;
+            dom.style.backgroundColor = bg || "var(--color-secondary, #f5f5f5)";
+            if (bg) {
+              dom.setAttribute("data-header-bg", bg);
+            } else {
+              dom.removeAttribute("data-header-bg");
+            }
+          };
+          applyBackground(node);
           let colspan = node.attrs.colspan;
           let rowspan = node.attrs.rowspan;
           const updateGrid = (colspan: number, rowspan: number) => {
@@ -32,6 +60,7 @@ export const TableHeaderPlus = TableHeader.extend({
                 colspan = updatedColspan;
                 updateGrid(updatedColspan, rowspan);
               }
+              applyBackground(updatedNode);
               return true;
             },
           };
@@ -39,10 +68,13 @@ export const TableHeaderPlus = TableHeader.extend({
       },
     renderHTML({ HTMLAttributes }) {
         const existingStyle = HTMLAttributes.style || "";
-        const backgroundColor = "background-color: var(--color-secondary, #f5f5f5)";
+        const backgroundColor = HTMLAttributes['data-header-bg'] || null;
+        const baseBg = backgroundColor
+            ? `background-color: ${backgroundColor}`
+            : "background-color: var(--color-secondary, #f5f5f5)";
         const mergedStyle = existingStyle 
-            ? `${backgroundColor}; ${existingStyle}` 
-            : backgroundColor;
+            ? `${baseBg}; ${existingStyle}` 
+            : baseBg;
         
         return [
             "th",

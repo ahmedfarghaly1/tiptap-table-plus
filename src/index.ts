@@ -9,6 +9,7 @@ declare module "@tiptap/core" {
         setTableAlign: (align: 'left' | 'center' | 'right' | 'start' | 'end' | 'justify') => ReturnType;
         unsetTableAlign: () => ReturnType;
         toggleTableLock: () => ReturnType;
+        setHeaderBackground: (color: string | null) => ReturnType;
       };
     }
   }
