@@ -94,7 +94,10 @@ export const TablePlus = Table.extend<TablePlusOptions>({
             new TablePlusNodeView(props.node, props.getPos, props.editor, this.options);
     },
   addProseMirrorPlugins() {
+    const parentPlugins = this.parent?.() ?? []
+
     return [
+      ...parentPlugins,
       new Plugin({
         key: new PluginKey("tablePlusPlugin"),
         appendTransaction: (transactions, oldState, newState) => {
